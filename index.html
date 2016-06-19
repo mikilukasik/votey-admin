@@ -1,0 +1,168 @@
+<head>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.min.js"></script>
+	<style>
+  	.highlighted{
+  		background: silver
+  	}
+  	.tablehead{
+  		background: gray
+  	}
+  </style>
+	<script>
+	
+		var appModule = angular.module("appModule", []);
+
+		appModule.service('apiService', function($http){
+			return {
+				dbQuery: function(query){
+					return $http({
+		        method: 'POST',
+		        url: 'http://localhost:5000/api/dbQuery',
+		      	//url: 'http://votey.dokku.jay.li/api/dbQuery',
+		      
+		        headers: {
+		          'Content-Type': 'application/json',
+		          //authToken: $rootScope.authToken	//TODO: implement tokens
+		        },
+		        data: query
+		      });
+					
+				},
+				submitDocumentChanges: function(collection, record){
+					return $http({
+		        method: 'POST',
+		        url: 'http://localhost:5000/api/submitDocumentChanges',
+		      	//url: 'http://votey.dokku.jay.li/api/dbQuery',
+		      
+		        headers: {
+		          'Content-Type': 'application/json',
+		          //authToken: $rootScope.authToken	//TODO: implement tokens
+		        },
+		        data: {
+		        	collection: collection,
+		        	record: record
+		        }
+		      });
+					
+				}
+
+			};
+		});
+
+		appModule.controller("appCtrl", ApplicationController);
+		function ApplicationController($scope, apiService) {			//$rootScope, , $timeout, $http, $interval, $compile
+		
+			$scope.editingLine = {}
+
+			var arrayOfObjectsToHeadedArray = function (arrOfObjs){
+				var headedArray = [];
+				var keys = [];
+
+				var indexInKeys = function(key){
+					var index = keys.indexOf(key);
+					if(index < 0) index = keys.push(key) - 1;
+					return index;
+				};
+
+				arrOfObjs.forEach(function(document, docIndex){
+					headedArray[docIndex+1] = [];
+					for(key in document){
+						var index = indexInKeys(key);
+						headedArray[docIndex+1][index] = document[key];
+					}
+				});
+
+				headedArray[0] = keys;
+
+				return headedArray;
+
+
+			}
+
+			$scope.query = {
+				submit : function (collection, getLastQuery) {
+
+					var query = this;
+					var formData = {
+						query: getLastQuery ? $scope.lastQuery : query.input,
+						collection: collection
+					};
+					console.log(formData, 'formData')
+					apiService.dbQuery(formData).then(function(result){
+						$scope.activeCollection = collection;
+						$scope.lastQuery = query.input;
+						console.log('query result', result.data.data)
+						$scope.displayedTable = arrayOfObjectsToHeadedArray(result.data.data);
+						$scope.queryResult = result.data.data;
+					});
+					query.previous = query.input;
+					query.input = undefined;
+				}
+			};
+
+			$scope.editLine = function (lineIndex) {
+				$scope.editingLineIndex = lineIndex;
+				$scope.editingLine = $scope.queryResult[lineIndex-1]
+			};
+
+			$scope.submitDocumentChanges = function(){
+				apiService.submitDocumentChanges($scope.activeCollection, $scope.editingLine).then(function () {
+					$scope.query.submit($scope.activeCollection, true);
+				})
+			}
+		
+		
+		
+		
+		};
+	
+	</script>
+	
+</head>
+
+<body ng-app="appModule" ng-controller="appCtrl">
+	
+	<form ng-submit="query.submit(query.collection)">
+		<label>Query:</label>
+		<input ng-model="query.input"></input>
+		<select ng-model="query.collection">
+			<option value="clients">clients<option>
+			<option value="questions">questions<option>
+		</select>
+		<button type="submit">Submit</button>
+	</form>
+		
+	<table style="table-layout:fixed">
+		<tr>
+			<td style="width: 20%">
+				<pre style="margin:0; overflow:scroll">
+			  	<table>
+			  		<tr ng-repeat="(key, val) in editingLine">
+				  		<td>
+				  			{{key}}
+				  		</td>	
+				  		<td>
+				  			<input ng-model="editingLine[key]"></input>
+				  		</td>	
+			  		</tr>
+			  	</table>
+			  	<button type="button" ng-click="submitDocumentChanges()">Submit Changes</button>
+		  	</pre>
+		  </td>
+		  <td style="width: 20%">
+			  <pre style="margin:0; overflow:scroll">
+				  <table>
+						<tr ng-repeat="lines in displayedTable track by $index" ng-click="editLine($index)" ng-class="{highlighted: $index === editingLineIndex, tablehead: $index === 0}">
+							<td ng-repeat="data in lines track by $index" style="border: 1px solid gray; border-collapse: true">
+								{{data}}
+							</td>
+						</tr>
+					</table>
+				</pre>
+		  </td>
+		</tr>
+	</table>
+
+
+</body>
