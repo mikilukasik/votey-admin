@@ -18,7 +18,7 @@
 				dbQuery: function(query){
 					return $http({
 		        method: 'POST',
-		        url: 'http://localhost:5000/api/dbQuery',
+		        url: 'http://votey.dokku.jay.li/api/dbQuery',
 		      	//url: 'http://votey.dokku.jay.li/api/dbQuery',
 		      
 		        headers: {
@@ -32,7 +32,7 @@
 				submitDocumentChanges: function(collection, record){
 					return $http({
 		        method: 'POST',
-		        url: 'http://localhost:5000/api/submitDocumentChanges',
+		        url: 'http://votey.dokku.jay.li/api/submitDocumentChanges',
 		      	//url: 'http://votey.dokku.jay.li/api/dbQuery',
 		      
 		        headers: {
@@ -84,8 +84,10 @@
 				submit : function (collection, getLastQuery) {
 
 					var query = this;
+					var userQuery = getLastQuery ? $scope.lastQuery : query.input;
+					var userQueryObj = userQuery ? JSON.parse(userQuery) : {};
 					var formData = {
-						query: getLastQuery ? $scope.lastQuery : query.input,
+						query: userQueryObj,
 						collection: collection
 					};
 					console.log(formData, 'formData')
@@ -124,8 +126,9 @@
 <body ng-app="appModule" ng-controller="appCtrl">
 	
 	<form ng-submit="query.submit(query.collection)">
-		<label>Query:</label>
+		<label>Query (strict JSON standard, blank to get whole collection):</label>
 		<input ng-model="query.input"></input>
+		<label>Collection:</label>
 		<select ng-model="query.collection">
 			<option value="clients">clients<option>
 			<option value="questions">questions<option>
