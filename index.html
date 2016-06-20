@@ -1,145 +1,182 @@
 <head>
 
-	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.min.js"></script>
-	<style>
-  	.highlighted{
-  		background: silver
-  	}
-  	.tablehead{
-  		background: gray
-  	}
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.min.js"></script>
+  <style>
+    .highlighted {
+      background: silver
+    }
+    
+    .tablehead {
+      background: gray
+    }
   </style>
-	<script>
-	
-		var appModule = angular.module("appModule", []);
+  <script>
+    var appModule = angular.module("appModule", []);
 
-		appModule.service('apiService', function($http){
-			return {
-				dbQuery: function(query){
-					return $http({
-		        method: 'POST',
-		        url: 'http://votey.dokku.jay.li/api/dbQuery',
-		      	//url: 'http://votey.dokku.jay.li/api/dbQuery',
-		      
-		        headers: {
-		          'Content-Type': 'application/json',
-		          //authToken: $rootScope.authToken	//TODO: implement tokens
-		        },
-		        data: query
-		      });
-					
-				},
-				submitDocumentChanges: function(collection, record){
-					return $http({
-		        method: 'POST',
-		        url: 'http://votey.dokku.jay.li/api/submitDocumentChanges',
-		      	//url: 'http://votey.dokku.jay.li/api/dbQuery',
-		      
-		        headers: {
-		          'Content-Type': 'application/json',
-		          //authToken: $rootScope.authToken	//TODO: implement tokens
-		        },
-		        data: {
-		        	collection: collection,
-		        	record: record
-		        }
-		      });
-					
-				}
+    appModule.service('apiService', function($http) {
+      return {
+        dbQuery: function(query) {
+          return $http({
+            method: 'POST',
+            url: 'http://votey.dokku.jay.li/api/dbQuery',
 
-			};
-		});
+            headers: {
+              'Content-Type': 'application/json',
+              //authToken: $rootScope.authToken	//TODO: implement tokens
+            },
+            data: query
+          });
 
-		appModule.controller("appCtrl", ApplicationController);
-		function ApplicationController($scope, apiService) {			//$rootScope, , $timeout, $http, $interval, $compile
-		
-			$scope.editingLine = {}
+        },
+        submitDocumentChanges: function(collection, record) {
+          return $http({
+            method: 'POST',
+            url: 'http://votey.dokku.jay.li/api/submitDocumentChanges',
 
-			var arrayOfObjectsToHeadedArray = function (arrOfObjs){
-				var headedArray = [];
-				var keys = [];
+            headers: {
+              'Content-Type': 'application/json',
+              //authToken: $rootScope.authToken	//TODO: implement tokens
+            },
+            data: {
+              collection: collection,
+              record: record
+            }
+          });
 
-				var indexInKeys = function(key){
-					var index = keys.indexOf(key);
-					if(index < 0) index = keys.push(key) - 1;
-					return index;
-				};
+        }
 
-				arrOfObjs.forEach(function(document, docIndex){
-					headedArray[docIndex+1] = [];
-					for(key in document){
-						var index = indexInKeys(key);
-						headedArray[docIndex+1][index] = document[key];
-					}
-				});
+      };
+    });
 
-				headedArray[0] = keys;
+    appModule.controller("appCtrl", ApplicationController);
 
-				return headedArray;
+    function ApplicationController($scope, apiService) { //$rootScope, , $timeout, $http, $interval, $compile
 
+      $scope.editingLine = {};
+      $scope.editingLineDataTypes = {};
 
-			}
+      $scope.dataTypes = ['string', 'number', 'object', 'boolean', 'undefined'];
+      $scope.collections = ['clients', 'questions'];
 
-			$scope.query = {
-				submit : function (collection, getLastQuery) {
+      var arrayOfObjectsToHeadedArray = function(arrOfObjs) {
+        var headedArray = [];
+        var keys = [];
 
-					var query = this;
-					var userQuery = getLastQuery ? $scope.lastQuery : query.input;
-					var userQueryObj = userQuery ? JSON.parse(userQuery) : {};
-					var formData = {
-						query: userQueryObj,
-						collection: collection
-					};
-					console.log(formData, 'formData')
-					apiService.dbQuery(formData).then(function(result){
-						$scope.activeCollection = collection;
-						$scope.lastQuery = query.input;
-						console.log('query result', result.data.data)
-						$scope.displayedTable = arrayOfObjectsToHeadedArray(result.data.data);
-						$scope.queryResult = result.data.data;
-					});
-					query.previous = query.input;
-					query.input = undefined;
-				}
-			};
+        var indexInKeys = function(key) {
+          var index = keys.indexOf(key);
+          if (index < 0) index = keys.push(key) - 1;
+          return index;
+        };
 
-			$scope.editLine = function (lineIndex) {
-				$scope.editingLineIndex = lineIndex;
-				$scope.editingLine = $scope.queryResult[lineIndex-1]
-			};
+        arrOfObjs.forEach(function(document, docIndex) {
+          headedArray[docIndex + 1] = [];
+          for (key in document) {
+            var index = indexInKeys(key);
+            headedArray[docIndex + 1][index] = document[key];
+          }
+        });
 
-			$scope.submitDocumentChanges = function(){
-				apiService.submitDocumentChanges($scope.activeCollection, $scope.editingLine).then(function () {
-					$scope.query.submit($scope.activeCollection, true);
-				})
-			}
-		
-		
-		
-		
-		};
-	
-	</script>
-	
+        headedArray[0] = keys;
+
+        return headedArray;
+
+      };
+
+      var getEditingLineDataTypes = function(obj) {
+        var result = {};
+        for (var key in obj) {
+          result[key] = typeof obj[key];
+        };
+        return result;
+      };
+
+      var getEditingLine = function(inObj, types) {
+        var obj = angular.copy(inObj);
+        for (var key in obj) {
+          if (types[key] === 'object') obj[key] = JSON.stringify(obj[key]);
+        };
+        return obj;
+      };
+
+      var parseEditingLine = function(inObj, types) {
+        var obj = angular.copy(inObj);
+        for (var key in obj) {
+          switch (types[key]) {
+            case 'object':
+              obj[key] = JSON.parse(obj[key]);
+              break;
+            case 'number':
+              obj[key] = Number(obj[key]);
+              break;
+            case 'string':
+              obj[key] = obj[key].toString();
+              break;
+            case 'boolean':
+              obj[key] = !!obj[key];
+              break;
+            default:
+          }
+
+        };
+        return obj;
+      };
+
+      $scope.query = {
+        submit: function(collection, getLastQuery) {
+
+          var query = this;
+          var userQuery = getLastQuery ? $scope.lastQuery : query.input;
+          var userQueryObj = userQuery ? JSON.parse(userQuery) : {};
+          var formData = {
+            query: userQueryObj,
+            collection: collection
+          };
+          console.log(formData, 'formData')
+          apiService.dbQuery(formData).then(function(result) {
+            $scope.activeCollection = collection;
+            $scope.lastQuery = query.input;
+            console.log('query result', result.data.data)
+            $scope.displayedTable = arrayOfObjectsToHeadedArray(result.data.data);
+            $scope.queryResult = result.data.data;
+          });
+          query.previous = query.input;
+          query.input = undefined;
+        }
+      };
+
+      $scope.editLine = function(lineIndex) {
+        $scope.editingLineIndex = lineIndex;
+        var editingLine = $scope.queryResult[lineIndex - 1]
+        $scope.editingLineDataTypes = getEditingLineDataTypes(editingLine);
+        $scope.editingLine = getEditingLine(editingLine, $scope.editingLineDataTypes);
+      };
+
+      $scope.submitDocumentChanges = function() {
+        apiService.submitDocumentChanges($scope.activeCollection, parseEditingLine($scope.editingLine, $scope.editingLineDataTypes)).then(function() {
+          $scope.query.submit($scope.activeCollection, true);
+        })
+      }
+
+    };
+  </script>
+
 </head>
 
 <body ng-app="appModule" ng-controller="appCtrl">
-	
-	<form ng-submit="query.submit(query.collection)">
-		<label>Query (strict JSON standard, blank to get whole collection):</label>
-		<input ng-model="query.input"></input>
-		<label>Collection:</label>
-		<select ng-model="query.collection">
-			<option value="clients">clients<option>
-			<option value="questions">questions<option>
-		</select>
-		<button type="submit">Submit</button>
-	</form>
-		
-	<table style="table-layout:fixed">
-		<tr>
-			<td style="width: 20%">
-				<pre style="margin:0; overflow:scroll">
+
+  <form ng-submit="query.submit(query.collection)">
+    <label>Query (strict JSON standard, blank to get whole collection):</label>
+    <input ng-model="query.input"></input>
+    <label>Collection:</label>
+    <select ng-options="item as item for item in collections" ng-model="query.collection">
+								</select>
+    <button type="submit">Submit</button>
+  </form>
+
+  <table style="table-layout:fixed">
+    <tr>
+      <td style="width: 20%">
+        <pre style="margin:0; overflow:scroll">
 			  	<table>
 			  		<tr ng-repeat="(key, val) in editingLine">
 				  		<td>
@@ -148,13 +185,17 @@
 				  		<td>
 				  			<input ng-model="editingLine[key]"></input>
 				  		</td>	
+				  		<td>
+				  			<select ng-options="item as item for item in dataTypes" ng-model="editingLineDataTypes[key]">
+								</select>
+							</td>
 			  		</tr>
 			  	</table>
 			  	<button type="button" ng-click="submitDocumentChanges()">Submit Changes</button>
 		  	</pre>
-		  </td>
-		  <td style="width: 20%">
-			  <pre style="margin:0; overflow:scroll">
+      </td>
+      <td style="width: 20%">
+        <pre style="margin:0; overflow:scroll">
 				  <table>
 						<tr ng-repeat="lines in displayedTable track by $index" ng-click="editLine($index)" ng-class="{highlighted: $index === editingLineIndex, tablehead: $index === 0}">
 							<td ng-repeat="data in lines track by $index" style="border: 1px solid gray; border-collapse: true">
@@ -163,9 +204,9 @@
 						</tr>
 					</table>
 				</pre>
-		  </td>
-		</tr>
-	</table>
+      </td>
+    </tr>
+  </table>
 
 
 </body>
