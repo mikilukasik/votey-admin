@@ -9,6 +9,46 @@
     .tablehead {
       background: gray
     }
+
+    #query {
+        border: 1px solid gray;
+        text-align: center;
+        /*display: inline-block;*/
+        /*vertical-align: middle;*/
+        padding: 10px;
+    }
+    #wrapper {
+        /*border: 1px solid blue;*/
+        border: 1px solid gray;
+        padding-left: 0.5%;
+        padding-top: 0.4%;
+        padding-bottom: 0.4%;
+    }
+    #div1 {
+        display: inline-block;
+        width:30%;
+        height: 90%;
+        overflow: scroll;
+        vertical-align: top;
+        text-align: center;
+        border: 1px solid gray;
+        /*height:120px;
+        border: 1px solid red;*/
+    }
+    #div2 {
+        display: inline-block;
+        width:69%;
+        height: 90%;
+        overflow: scroll;
+        border: 1px solid gray;
+        vertical-align: top;
+        /*height:160px;
+        border: 1px solid green;*/
+    }
+
+    table{
+      border-collapse: collapse;
+    }
   </style>
   <script>
     var appModule = angular.module("appModule", []);
@@ -163,20 +203,26 @@
 </head>
 
 <body ng-app="appModule" ng-controller="appCtrl">
-
+<div id="query">
   <form ng-submit="query.submit(query.collection)">
     <label>Query (strict JSON standard, blank to get whole collection):</label>
     <input ng-model="query.input"></input>
+
+    <label>Projection (coming soon):</label>
+    <input ng-model="query.projection"></input>
+
     <label>Collection:</label>
     <select ng-options="item as item for item in collections" ng-model="query.collection">
 								</select>
     <button type="submit">Submit</button>
   </form>
-
-  <table style="table-layout:fixed">
-    <tr>
-      <td style="width: 20%">
-        <pre style="margin:0; overflow:scroll">
+</div>
+  <!-- <table style="table-layout:fixed"> -->
+    <!-- <tr>
+      <td style="width: 20%"> -->
+    <div id="wrapper">
+      <div id="div1">
+        <pre>
 			  	<table>
 			  		<tr ng-repeat="(key, val) in editingLine">
 				  		<td>
@@ -191,11 +237,18 @@
 							</td>
 			  		</tr>
 			  	</table>
-			  	<button type="button" ng-click="submitDocumentChanges()">Submit Changes</button>
+			  	
 		  	</pre>
-      </td>
-      <td style="width: 20%">
-        <pre style="margin:0; overflow:scroll">
+
+        <button type="button" ng-click="createNewDocument()">Create new document</button>
+        <button type="button" ng-click="deleteDocument()">Delete this document</button>
+        <button type="button" ng-click="submitDocumentChanges()">Submit Changes</button>
+
+      </div>
+      <div id="div2">
+      <!-- </td>
+      <td style="width: 20%"> -->
+        <pre>
 				  <table>
 						<tr ng-repeat="lines in displayedTable track by $index" ng-click="editLine($index)" ng-class="{highlighted: $index === editingLineIndex, tablehead: $index === 0}">
 							<td ng-repeat="data in lines track by $index" style="border: 1px solid gray; border-collapse: true">
@@ -204,9 +257,12 @@
 						</tr>
 					</table>
 				</pre>
-      </td>
+
+      </div>
+    </div>
+     <!--  </td>
     </tr>
-  </table>
+  </table> -->
 
 
 </body>
