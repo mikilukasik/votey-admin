@@ -16,6 +16,7 @@
         /*display: inline-block;*/
         /*vertical-align: middle;*/
         padding: 10px;
+        font-family: monospace;
     }
     #wrapper {
         /*border: 1px solid blue;*/
@@ -32,6 +33,7 @@
         vertical-align: top;
         text-align: center;
         border: 1px solid gray;
+        font-family: monospace;
         /*height:120px;
         border: 1px solid red;*/
     }
@@ -42,9 +44,14 @@
         overflow: scroll;
         border: 1px solid gray;
         vertical-align: top;
+        font-family: monospace;
         /*height:160px;
         border: 1px solid green;*/
-    }
+    },
+   /* .monofont {
+      font-family: monospace;
+      background: red;
+    }*/
 
     table{
       border-collapse: collapse;
@@ -122,6 +129,14 @@
 
       };
 
+      var getEditLineIndexFromId = function (id) {
+        for (var index in $scope.queryResult){
+          if($scope.queryResult[index]._id == id) return Number(index);
+        }
+        return -1;
+        // body...
+      }
+
       var getEditingLineDataTypes = function(obj) {
         var result = {};
         for (var key in obj) {
@@ -156,7 +171,7 @@
               break;
             default:
           }
-
+          if(key === "_id" && obj._id === 'New unsaved document') obj._id = undefined;
         };
         return obj;
       };
@@ -172,19 +187,21 @@
             collection: collection
           };
           console.log(formData, 'formData')
-          apiService.dbQuery(formData).then(function(result) {
+          return apiService.dbQuery(formData).then(function(result) {
             $scope.activeCollection = collection;
             $scope.lastQuery = query.input;
             console.log('query result', result.data.data)
             $scope.displayedTable = arrayOfObjectsToHeadedArray(result.data.data);
             $scope.queryResult = result.data.data;
+            query.previous = query.input;
+            query.input = undefined;
           });
-          query.previous = query.input;
-          query.input = undefined;
+          
         }
       };
 
       $scope.editLine = function(lineIndex) {
+        console.log('@@', lineIndex)
         $scope.editingLineIndex = lineIndex;
         var editingLine = $scope.queryResult[lineIndex - 1]
         $scope.editingLineDataTypes = getEditingLineDataTypes(editingLine);
@@ -192,10 +209,20 @@
       };
 
       $scope.submitDocumentChanges = function() {
-        apiService.submitDocumentChanges($scope.activeCollection, parseEditingLine($scope.editingLine, $scope.editingLineDataTypes)).then(function() {
-          $scope.query.submit($scope.activeCollection, true);
+        apiService.submitDocumentChanges($scope.activeCollection, parseEditingLine($scope.editingLine, $scope.editingLineDataTypes)).then(function(result) {
+          var savedDocId = result.data.data._id;
+          console.log(savedDocId)
+          
+          $scope.query.submit($scope.activeCollection, true)
+          .then(function(){
+            $scope.editLine(getEditLineIndexFromId(savedDocId)+1);
+          });
         })
-      }
+      };
+
+      $scope.newDocumentFromThis = function () {
+        $scope.editingLine._id = 'New unsaved document';
+      };
 
     };
   </script>
@@ -203,28 +230,43 @@
 </head>
 
 <body ng-app="appModule" ng-controller="appCtrl">
-<div id="query">
-  <form ng-submit="query.submit(query.collection)">
-    <label>Query (strict JSON standard, blank to get whole collection):</label>
-    <input ng-model="query.input"></input>
+<div id="query" class="monofont">
+  
+    <form ng-submit="query.submit(query.collection)">
+      <label>Collection:</label>
+      <select ng-options="item as item for item in collections" ng-model="query.collection">
+                  </select>
 
-    <label>Projection (coming soon):</label>
-    <input ng-model="query.projection"></input>
+      <label>Query:</label>
+      <input ng-model="query.input"></input>
 
-    <label>Collection:</label>
-    <select ng-options="item as item for item in collections" ng-model="query.collection">
-								</select>
-    <button type="submit">Submit</button>
-  </form>
+      <label>Projection (coming soon):</label>
+      <input ng-model="query.projection"></input>
+
+      
+      <button type="submit">Submit</button>
+      <br>
+      (strict JSON standard, blank to get whole collection)
+    </form>
+  
 </div>
   <!-- <table style="table-layout:fixed"> -->
     <!-- <tr>
       <td style="width: 20%"> -->
     <div id="wrapper">
       <div id="div1">
-        <pre>
+        <!-- <pre> -->
 			  	<table>
-			  		<tr ng-repeat="(key, val) in editingLine">
+            <tr class="tablehead" ng-if="editingLine._id">
+              <td>
+                _id
+              </td> 
+              <td colspan="2">
+                {{editingLine._id}}
+              </td> 
+              
+            </tr>
+			  		<tr ng-repeat="(key, val) in editingLine" ng-if="key !== '_id'">
 				  		<td>
 				  			{{key}}
 				  		</td>	
@@ -238,17 +280,15 @@
 			  		</tr>
 			  	</table>
 			  	
-		  	</pre>
-
-        <button type="button" ng-click="createNewDocument()">Create new document</button>
-        <button type="button" ng-click="deleteDocument()">Delete this document</button>
-        <button type="button" ng-click="submitDocumentChanges()">Submit Changes</button>
-
+		  	<!-- </pre> -->
+        <div ng-if="editingLine._id">
+          <button type="button" ng-click="newDocumentFromThis()">New from this</button>
+          <button type="button" ng-click="deleteDocument()">Delete document</button>
+          <button type="button" ng-click="submitDocumentChanges()">Submit changes</button>
+        </div>
       </div>
       <div id="div2">
-      <!-- </td>
-      <td style="width: 20%"> -->
-        <pre>
+      
 				  <table>
 						<tr ng-repeat="lines in displayedTable track by $index" ng-click="editLine($index)" ng-class="{highlighted: $index === editingLineIndex, tablehead: $index === 0}">
 							<td ng-repeat="data in lines track by $index" style="border: 1px solid gray; border-collapse: true">
@@ -256,7 +296,7 @@
 							</td>
 						</tr>
 					</table>
-				</pre>
+			
 
       </div>
     </div>
