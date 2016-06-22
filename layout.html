@@ -115,6 +115,22 @@
             }
           });
 
+        },
+        deleteDocument: function(collection, record) {
+          return $http({
+            method: 'POST',
+            url: 'http://votey.dokku.jay.li/api/deleteDocument',
+
+            headers: {
+              'Content-Type': 'application/json',
+              //authToken: $rootScope.authToken //TODO: implement tokens
+            },
+            data: {
+              collection: collection,
+              record: record
+            }
+          });
+
         }
 
       };
@@ -335,6 +351,15 @@
       $scope.newDocumentFromThis = function() {
         $scope.editingLine._id = 'New unsaved document';
       };
+
+      $scope.deleteDocument = function() {
+        if(confirm('Are you sure you want to delete this document?'){
+          apiService.deleteDocument($scope.activeCollection, parseEditingLine($scope.editingLine, $scope.editingLineDataTypes)).then(function(result) {
+            //alert('Document deleted.');
+            $scope.query.submit($scope.activeCollection, true)
+          });
+        }
+      }
 
     };
   </script>
