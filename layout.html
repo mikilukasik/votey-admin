@@ -354,9 +354,13 @@
 
       $scope.deleteDocument = function() {
         if(confirm('Are you sure you want to delete this document?')){
-          apiService.deleteDocument($scope.activeCollection, parseEditingLine($scope.editingLine, $scope.editingLineDataTypes)).then(function(result) {
+          apiService.deleteDocument($scope.activeCollection, parseEditingLine($scope.editingLine, $scope.editingLineDataTypes))
+          .then(function(result) {
             //alert('Document deleted.');
-            $scope.query.submit($scope.activeCollection, true)
+            return $scope.query.submit($scope.activeCollection, true)
+          }).then(function(){
+            $scope.editLine(-1);
+            $scope.myLayout.close('west');
           });
         }
       }
