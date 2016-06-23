@@ -304,6 +304,20 @@
         return obj;
       };
 
+      var countTrueVals = function(arr){
+        var result = 0;
+        for (var i=0, len=arr.length; i<len; i++) if(arr[i]) result++;
+        return result;
+      }
+
+      $scope.selectLine = function(lineNumber){
+        if(lineNumber === 0){
+          for (var i=0, len=$scope.selectedLines.length; i<len; i++) $scope.selectedLines[i] = $scope.selectedLines[0];
+          return;
+        }
+        if(countTrueVals($scope.selectedLines.slice(1)) === 1 && $scope.selectedLines[lineNumber]) $scope.editLine(lineNumber);
+      }
+
       $scope.query = {
         submit: function(collection, getLastQuery) {
 
@@ -314,11 +328,17 @@
             query: userQueryObj,
             collection: collection
           };
-          console.log(formData, 'formData')
+          
           return apiService.dbQuery(formData).then(function(result) {
+            $scope.selectedLines = [];//new Array(result.data.data.length + 1)
+
+            for(var i = 0, len = result.data.data.length +1; i<len; i++ ) $scope.selectedLines[i] = false;
+
             $scope.activeCollection = collection;
             $scope.lastQuery = query.input;
-            console.log('query result', result.data.data)
+            
+            console.log('query result', result.data.data);
+
             $scope.displayedTable = arrayOfObjectsToHeadedArray(result.data.data);
             $scope.queryResult = result.data.data;
             query.previous = query.input;
@@ -404,8 +424,11 @@
   <div id="app_edit_cmd" class="ui-layout-center lui monofont">
 
     <table>
-      <tr ng-repeat="lines in displayedTable track by $index" ng-click="editLine($index)" ng-class="{highlighted: $index === editingLineIndex, tablehead: $index === 0}">
-        <td ng-repeat="data in lines track by $index" style="border: 1px solid gray; border-collapse: true">
+      <tr ng-repeat="(lineNumber, lines) in displayedTable" ng-class="{highlighted: lineNumber === editingLineIndex, tablehead: lineNumber === 0}">
+        <td>
+          <input type="checkbox" ng-model="selectedLines[lineNumber]" ng-change="selectLine(lineNumber)"></input>
+        </td>
+        <td ng-repeat="data in lines track by $index" style="border: 1px solid gray; border-collapse: true" ng-click="editLine(lineNumber)">
           {{data}}
         </td>
       </tr>
