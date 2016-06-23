@@ -18,6 +18,10 @@
   <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.min.js"></script>
 
   <style>
+    .bordered{
+      border: 1px solid gray;
+      border-collapse: true
+    }
     .highlighted {
       background: silver
     }
@@ -425,10 +429,10 @@
 
     <table>
       <tr ng-repeat="(lineNumber, lines) in displayedTable" ng-class="{highlighted: lineNumber === editingLineIndex, tablehead: lineNumber === 0}">
-        <td>
+        <td class="bordered">
           <input type="checkbox" ng-model="selectedLines[lineNumber]" ng-change="selectLine(lineNumber)"></input>
         </td>
-        <td ng-repeat="data in lines track by $index" style="border: 1px solid gray; border-collapse: true" ng-click="editLine(lineNumber)">
+        <td ng-repeat="data in lines track by $index" class="bordered" ng-click="editLine(lineNumber)">
           {{data}}
         </td>
       </tr>
