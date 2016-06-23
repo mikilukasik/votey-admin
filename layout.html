@@ -135,6 +135,22 @@
             }
           });
 
+        },
+        multiDeleteDocuments: function(collection, ids) {
+          return $http({
+            method: 'POST',
+            url: 'http://votey.dokku.jay.li/api/multiDeleteDocuments',
+
+            headers: {
+              'Content-Type': 'application/json',
+              //authToken: $rootScope.authToken //TODO: implement tokens
+            },
+            data: {
+              collection: collection,
+              ids: ids
+            }
+          });
+
         }
 
       };
@@ -227,6 +243,8 @@
         $scope.myLayout.close('west');
       }, 1)
 
+      
+
       // $rootScope.on('anyad',function(){
       //   console.log('blabla')
       // })
@@ -308,18 +326,72 @@
         return obj;
       };
 
-      var countTrueVals = function(arr){
+      var selectedLinesCount = function(){
         var result = 0;
-        for (var i=0, len=arr.length; i<len; i++) if(arr[i]) result++;
+        for (var i=1, len=$scope.selectedLines.length; i<len; i++) if($scope.selectedLines[i]) result++;
         return result;
-      }
+      };
 
-      $scope.selectLine = function(lineNumber){
+      $scope.isGroupEdit = () => selectedLinesCount() > 1;
+
+      var doSelectLine = (lineNumber) => {
         if(lineNumber === 0){
-          for (var i=0, len=$scope.selectedLines.length; i<len; i++) $scope.selectedLines[i] = $scope.selectedLines[0];
+          for (var i=1, len=$scope.selectedLines.length; i<len; i++) $scope.selectedLines[i] = $scope.selectedLines[0];
           return;
         }
-        if(countTrueVals($scope.selectedLines.slice(1)) === 1 && $scope.selectedLines[lineNumber]) $scope.editLine(lineNumber);
+        if(selectedLinesCount() === 1 && $scope.selectedLines[lineNumber]) $scope.editLine(lineNumber);
+      };
+
+      $scope.getSelectedArray = () => {
+        var result = [];
+        for (var i=1, len=$scope.selectedLines.length; i<len; i++) if($scope.selectedLines[i]) result.push($scope.queryResult[i-1]);
+        return result;
+      };
+
+      var getKeysFromArrayOfObjects = (arr) => {
+        var keys = [];
+
+        var indexInKeys = function(key) {
+          var index = keys.indexOf(key);
+          if (index < 0) index = keys.push(key) - 1;
+          return index;
+        };
+
+        arr.forEach((editingLine) => {
+          for (key in editingLine) {
+            indexInKeys(key);
+          }
+        })
+
+        return keys;
+      };
+
+      var getKeyValueFromArrayOfObjects = (key, arr) => {
+        var val = arr[0][key];
+        arr.forEach((editingLine) => {
+          if(editingLine[key]!==val && JSON.stringify(val) !== JSON.stringify(editingLine[key])) val = '...'
+        })
+        return val;
+      };
+
+      var prepareGroupEditLine = () => {
+        $scope.groupEditLine = {};
+        var selectedArray = $scope.getSelectedArray();
+        console.log('selectedArray', selectedArray)
+        var keys = getKeysFromArrayOfObjects(selectedArray);
+        console.log('keys', keys)
+        keys.forEach((key) => {
+          $scope.groupEditLine[key] = getKeyValueFromArrayOfObjects(key, selectedArray);
+        });
+        console.log('$scope.groupEditLine', $scope.groupEditLine)
+        $scope.groupEditLineDataTypes = getEditingLineDataTypes($scope.groupEditLine);
+        $scope.groupEditLine = getEditingLine($scope.groupEditLine, $scope.groupEditLineDataTypes);
+      };
+
+      $scope.selectLine = function(lineNumber){
+        doSelectLine(lineNumber);
+        
+        if ($scope.isGroupEdit()) prepareGroupEditLine()
       }
 
       $scope.query = {
@@ -387,7 +459,30 @@
             $scope.myLayout.close('west');
           });
         }
-      }
+      };
+
+      var getIdsFromArrayOfObjects = function(arr){
+        var ids = [];
+        arr.forEach((document) => {
+          ids.push(document._id);
+        });
+        return ids;
+      };
+
+      $scope.deleteSelectedDocuments = () => {
+        var ids = getIdsFromArrayOfObjects($scope.getSelectedArray());
+        if(confirm('Are you sure you want to delete ' + ids.length + ' selected documents?')){
+          apiService.multiDeleteDocuments($scope.activeCollection, ids)
+          .then(function(result) {
+            //alert('Document deleted.');
+            return $scope.query.submit($scope.activeCollection, true)
+          }).then(function(){
+            $scope.editLine(-1);
+            $scope.myLayout.close('west');
+          });
+        }
+        
+      };
 
     };
   </script>
@@ -450,37 +545,75 @@ east
 
 
   <div id="app_edit_prdy" class="ui-layout-west lui monofont">
-    <table>
-      <tr class="tablehead" ng-if="editingLine._id">
-        <td>
-          _id
-        </td>
-        <td colspan="2">
-          {{editingLine._id}}
-        </td>
 
-      </tr>
-      <tr ng-repeat="(key, val) in editingLine" ng-if="key !== '_id'">
-        <td>
-          {{key}}
-        </td>
-        <td width="100%">
-          <textarea elastic ng-model="editingLine[key]" ng-if="editingLineDataTypes[key] !== 'boolean' && editingLineDataTypes[key] !== 'number'" style="width: 95%"></textarea>
-          <input ng-model="editingLine[key]" ng-if="editingLineDataTypes[key] === 'boolean' || editingLineDataTypes[key] === 'number'" style="width: 95%">
-        </td>
-        <td width="200px">
-          &nbsp<select ng-options="item as item for item in dataTypes" ng-model="editingLineDataTypes[key]">
-                                </select>
-        </td>
-      </tr>
-    </table>
 
-    <!-- </pre> -->
-    <div ng-if="editingLine._id" style="text-align: center; margin-top: 30px">
+
+
+    <div ng-if="isGroupEdit()">
+      <table>
+        <tr class="tablehead" ng-if="editingLine._id">
+          
+          <td colspan="3" style="text-align:center;">
+      <div>Group edit (Coming soon)</div>
+          
+          </td>
+
+        </tr>
+        <tr ng-repeat="(key, val) in groupEditLine" ng-if="key !== '_id'">
+          <td>
+            {{key}}
+          </td>
+          <td width="100%">
+            <textarea elastic ng-model="groupEditLine[key]" ng-if="groupEditLineDataTypes[key] !== 'boolean' && groupEditLineDataTypes[key] !== 'number'" style="width: 95%"></textarea>
+            <input ng-model="groupEditLine[key]" ng-if="groupEditLineDataTypes[key] === 'boolean' || groupEditLineDataTypes[key] === 'number'" style="width: 95%">
+          </td>
+          <td width="200px">
+            &nbsp<select ng-options="item as item for item in dataTypes" ng-model="groupEditLineDataTypes[key]">
+                                  </select>
+          </td>
+        </tr>
+      </table>
+      <div ng-if="editingLine._id" style="text-align: center; margin-top: 30px">
+        <!-- <button type="button" ng-click="newDocumentFromThis()">New from this</button> -->
+        <button type="button" ng-click="deleteSelectedDocuments()">Delete selected documents</button>
+        <button type="button" ng-click="">Submit changes(Coming soon)</button>
+      </div>
+    </div>
+
+    <div ng-if="!isGroupEdit()">
+      <table>
+        <tr class="tablehead" ng-if="editingLine._id">
+          <td>
+            _id
+          </td>
+          <td colspan="2">
+            {{editingLine._id}}
+          </td>
+
+        </tr>
+        <tr ng-repeat="(key, val) in editingLine" ng-if="key !== '_id'">
+          <td>
+            {{key}}
+          </td>
+          <td width="100%">
+            <textarea elastic ng-model="editingLine[key]" ng-if="editingLineDataTypes[key] !== 'boolean' && editingLineDataTypes[key] !== 'number'" style="width: 95%"></textarea>
+            <input ng-model="editingLine[key]" ng-if="editingLineDataTypes[key] === 'boolean' || editingLineDataTypes[key] === 'number'" style="width: 95%">
+          </td>
+          <td width="200px">
+            &nbsp<select ng-options="item as item for item in dataTypes" ng-model="editingLineDataTypes[key]">
+                                  </select>
+          </td>
+        </tr>
+      </table>
+       <div ng-if="editingLine._id" style="text-align: center; margin-top: 30px">
       <button type="button" ng-click="newDocumentFromThis()">New from this</button>
       <button type="button" ng-click="deleteDocument()">Delete document</button>
       <button type="button" ng-click="submitDocumentChanges()">Submit changes</button>
     </div>
+    </div>
+
+    <!-- </pre> -->
+    
   </div>
 
 </body>
