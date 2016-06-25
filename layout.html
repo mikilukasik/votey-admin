@@ -328,7 +328,7 @@
 
       var selectedLinesCount = function(){
         var result = 0;
-        for (var i=1, len=$scope.selectedLines.length; i<len; i++) if($scope.selectedLines[i]) result++;
+        if($scope.selectedLines) for (var i=1, len=$scope.selectedLines.length; i<len; i++) if($scope.selectedLines[i]) result++;
         return result;
       };
 
@@ -377,14 +377,11 @@
       var prepareGroupEditLine = () => {
         $scope.groupEditLine = {};
         var selectedArray = $scope.getSelectedArray();
-        console.log('selectedArray', selectedArray)
         var keys = getKeysFromArrayOfObjects(selectedArray);
-        console.log('keys', keys)
         keys.forEach((key) => {
           $scope.groupEditLine[key] = getKeyValueFromArrayOfObjects(key, selectedArray);
         });
-        console.log('$scope.groupEditLine', $scope.groupEditLine)
-        $scope.groupEditLineDataTypes = getEditingLineDataTypes($scope.groupEditLine);
+        $scope.groupEditLineDataTypes = getEditingLineDataTypes($scope.groupEditLine);  //TODO: not all '...' are strings!
         $scope.groupEditLine = getEditingLine($scope.groupEditLine, $scope.groupEditLineDataTypes);
       };
 
