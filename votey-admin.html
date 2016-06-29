@@ -100,15 +100,31 @@
   </style>
 
   <script>
+
+    //var serverAddress = 'http://votey.dokku.jay.li';
+    var serverAddress = 'http://miki.ddns.net:5000';      //dev mode
+
     var appModule = angular.module("appModule", []);
     appModule.controller("appCtrl", ApplicationController);
 
-    appModule.service('apiService', function($http) {
+    appModule.service('apiService', function($http, $rootScope) {
       return {
         login: function(user) {
           return $http({
             method: 'POST',
-            url: 'http://votey.dokku.jay.li/api/adminLogin',
+            url: serverAddress + '/api/adminLogin',
+
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            data: user
+          });
+
+        },
+        register: function(user) {
+          return $http({
+            method: 'POST',
+            url: serverAddress + '/api/adminRegister',
 
             headers: {
               'Content-Type': 'application/json',
@@ -120,7 +136,7 @@
         dbQuery: function(query) {
           return $http({
             method: 'POST',
-            url: 'http://votey.dokku.jay.li/api/dbQuery',
+            url: serverAddress + '/api/dbQuery',
 
             headers: {
               'Content-Type': 'application/json',
@@ -133,7 +149,7 @@
         submitDocumentChanges: function(collection, record) {
           return $http({
             method: 'POST',
-            url: 'http://votey.dokku.jay.li/api/submitDocumentChanges',
+            url: serverAddress + '/api/submitDocumentChanges',
 
             headers: {
               'Content-Type': 'application/json',
@@ -149,7 +165,7 @@
         deleteDocument: function(collection, record) {
           return $http({
             method: 'POST',
-            url: 'http://votey.dokku.jay.li/api/deleteDocument',
+            url: serverAddress + '/api/deleteDocument',
 
             headers: {
               'Content-Type': 'application/json',
@@ -165,7 +181,7 @@
         multiDeleteDocuments: function(collection, ids) {
           return $http({
             method: 'POST',
-            url: 'http://votey.dokku.jay.li/api/multiDeleteDocuments',
+            url: serverAddress + '/api/multiDeleteDocuments',
 
             headers: {
               'Content-Type': 'application/json',
@@ -214,7 +230,7 @@
 
             $timeout($scope.resizeElasticElements, 0);
 
-            $rootScope.elastincResizers.push(resize);
+            $rootScope.elasticResizers.push(resize);
 
           }
         };
@@ -227,16 +243,33 @@
       //   $scope.isLoggedIn = !$scope.isLoggedIn
       // },5000)
 
-      $rootScope.elastincResizers = [];
+      $rootScope.elasticResizers = [];
+      
       
       $scope.login = function (user) {
         
         return apiService.login(user).then(function(result){
-          $rootScope.authToken = result.authToken;
+          $rootScope.authToken = result.data.data;
           $rootScope.isLoggedIn = true;
+          user = {};
+        }, function(err){
+          if (err.data.message == "Wrong password.") return alert('Wrong password.');
+          errorService.dealWithError(err);
+        });
+
+      };
+
+
+      $scope.register = function (user) {
+        
+        if (user.pwd && user.pwd === user.pwd2) return apiService.register(user).then(function(result){
+          alert(user.name + ' registered.');
+          user = {};
         }, errorService.dealWithError);
 
       };
+
+
 
       $(document).ready(function() {
 
@@ -280,8 +313,7 @@
 
           west__onresize: function() {
 
-            //TODO: trigger resize in elastic directive from here
-            $rootScope.elastincResizers.forEach(function(resizer) {
+            $rootScope.elasticResizers.forEach(function(resizer) {
               resizer();
             })
 
@@ -305,7 +337,7 @@
       $scope.editingLineDataTypes = {};
 
       $scope.dataTypes = ['string', 'number', 'object', 'boolean', 'undefined'];
-      $scope.collections = ['clients', 'questions'];
+      $scope.collections = ['clients', 'questions', 'admins'];
 
       var arrayOfObjectsToHeadedArray = function(arrOfObjs) {
         var headedArray = [];
@@ -492,8 +524,8 @@
           $scope.query.submit($scope.activeCollection, true)
             .then(function() {
               $scope.editLine(getEditLineIndexFromId(savedDocId) + 1);
-            });
-        })
+            }, errorService.dealWithError);
+        }, errorService.dealWithError)
       };
 
       $scope.newDocumentFromThis = function() {
@@ -506,10 +538,10 @@
             .then(function(result) {
               //alert('Document deleted.');
               return $scope.query.submit($scope.activeCollection, true)
-            }).then(function() {
+            }, errorService.dealWithError).then(function() {
               $scope.editLine(-1);
               $scope.myLayout.close('west');
-            });
+            }, errorService.dealWithError);
         }
       };
 
@@ -528,10 +560,10 @@
             .then(function(result) {
               //alert('Document deleted.');
               return $scope.query.submit($scope.activeCollection, true)
-            }).then(function() {
+            }, errorService.dealWithError).then(function() {
               $scope.editLine(-1);
               $scope.myLayout.close('west');
-            });
+            }, errorService.dealWithError);
         }
 
       };
@@ -585,6 +617,31 @@
 
 
       </form>
+
+
+
+
+
+      <form ng-submit="register(regUser)">
+
+        <label>Username</label>
+        <input ng-model="regUser.name"></input>
+
+        <label>Password</label>
+        <input type="password" ng-model="regUser.pwd"></input>
+
+        <label>Re-type password</label>
+        <input type="password" ng-model="regUser.pwd2"></input>
+
+        <button type="submit">Register</button>
+
+
+      </form>
+
+
+
+
+
 
     </div>
 
