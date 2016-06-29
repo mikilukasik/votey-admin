@@ -34,7 +34,6 @@
       background-color: rgba(55, 55, 155, 0.8);
       color: white
     }*/
-    
     /*.northheight {
       height: 250px;
     }
@@ -42,7 +41,7 @@
     .fullheight {
       height: 100px;
     }*/
-
+    
     .bordered {
       border: 1px solid gray;
       border-collapse: true
@@ -100,9 +99,8 @@
   </style>
 
   <script>
-
-    //var serverAddress = 'http://votey.dokku.jay.li';
-    var serverAddress = 'http://miki.ddns.net:5000';      //dev mode
+    var serverAddress = 'http://votey.dokku.jay.li';
+    // var serverAddress = 'http://miki.ddns.net:5000'; //dev mode
 
     var appModule = angular.module("appModule", []);
     appModule.controller("appCtrl", ApplicationController);
@@ -128,6 +126,7 @@
 
             headers: {
               'Content-Type': 'application/json',
+              authToken: $rootScope.authToken
             },
             data: user
           });
@@ -198,18 +197,15 @@
       };
     });
 
-
     appModule.service('errorService', function() {
       return {
 
-        dealWithError: function(err){
+        dealWithError: function(err) {
           alert('Error: ' + JSON.stringify(err));
         }
 
       };
     });
-
-
 
     appModule.directive('elastic', [
       '$timeout', '$rootScope',
@@ -244,32 +240,28 @@
       // },5000)
 
       $rootScope.elasticResizers = [];
-      
-      
-      $scope.login = function (user) {
-        
-        return apiService.login(user).then(function(result){
+
+      $scope.login = function(user) {
+
+        return apiService.login(user).then(function(result) {
           $rootScope.authToken = result.data.data;
           $rootScope.isLoggedIn = true;
           user = {};
-        }, function(err){
+        }, function(err) {
           if (err.data.message == "Wrong password.") return alert('Wrong password.');
           errorService.dealWithError(err);
         });
 
       };
 
+      $scope.register = function(user) {
 
-      $scope.register = function (user) {
-        
-        if (user.pwd && user.pwd === user.pwd2) return apiService.register(user).then(function(result){
+        if (user.pwd && user.pwd === user.pwd2) return apiService.register(user).then(function(result) {
           alert(user.name + ' registered.');
           user = {};
         }, errorService.dealWithError);
 
       };
-
-
 
       $(document).ready(function() {
 
@@ -299,8 +291,8 @@
 
           north__size: 75,
           //north__spacing_closed: 20 // big resizer-bar when open (zero height)
-            //    ,    south__resizable:        false    // OVERRIDE the pane-default of 'resizable=true'
-           // ,
+          //    ,    south__resizable:        false    // OVERRIDE the pane-default of 'resizable=true'
+          // ,
           south__spacing_open: 0 // no resizer-bar when open (zero height)
             ,
           south__spacing_closed: 20 // big resizer-bar when open (zero height)
@@ -338,6 +330,7 @@
 
       $scope.dataTypes = ['string', 'number', 'object', 'boolean', 'undefined'];
       $scope.collections = ['clients', 'questions', 'admins'];
+      $scope.adminFunctions = ['Query', 'Register new admin'];
 
       var arrayOfObjectsToHeadedArray = function(arrOfObjs) {
         var headedArray = [];
@@ -503,7 +496,7 @@
             $scope.queryResult = result.data.data;
             query.previous = query.input;
             query.input = undefined;
-          },errorService.dealWithError);
+          }, errorService.dealWithError);
 
         }
       };
@@ -581,70 +574,66 @@
 
   <div id="app_edit_all" class="ui-layout-north lui">
 
-    <div id="query" class="monofont" ng-show="isLoggedIn">
+  <div style="display: table; height: 100%; width: 100%">
+      <div ng-show="isLoggedIn" style="display: table-cell; vertical-align: middle; background: silver; border-right: 5px solid white; width:1px">
+        <select ng-options="item as item for item in adminFunctions" ng-init="currentFunction='Query'" ng-model="currentFunction">
+          
+        </select>
+      </div>
 
-      <form ng-submit="query.submit(query.collection)">
-        <label>Collection:</label>
-        <select ng-options="item as item for item in collections" ng-model="query.collection">
-                  </select>
+      <div style="display: table-cell; vertical-align: middle; background: silver">
+        <div id="query" class="monofont">
 
-        <label>Query:</label>
-        <input ng-model="query.input"></input>
+          <form ng-submit="login(user)" ng-show="!isLoggedIn">
 
-        <label>Projection (coming soon):</label>
-        <input ng-model="query.projection"></input>
+            <label>Username</label>
+            <input ng-model="user.name"></input>
+
+            <label>Password</label>
+            <input type="password" ng-model="user.pwd"></input>
+
+            <button type="submit">Login</button>
 
 
-        <button type="submit">Submit</button>
-        <br> (strict JSON standard, blank to get whole collection)
-      </form>
+          </form>
 
+          <form ng-submit="query.submit(query.collection)" ng-show="isLoggedIn && currentFunction==='Query'">
+            <label>Collection:</label>
+            <select ng-options="item as item for item in collections" ng-model="query.collection" ng-init="query.collection = 'questions'">
+                      </select>
+
+            <label>Query:</label>
+            <input ng-model="query.input"></input>
+
+            <label>Projection (coming soon):</label>
+            <input ng-model="query.projection"></input>
+
+
+            <button type="submit">Submit</button>
+            <br> (strict JSON standard, blank to get whole collection)
+          </form>
+
+          <!-- <form ng-submit="register(regUser)"> -->
+          <form ng-submit="register(regUser)" ng-show="isLoggedIn && currentFunction==='Register new admin'">
+
+            <label>Username</label>
+            <input ng-model="regUser.name"></input>
+
+            <label>Password</label>
+            <input type="password" ng-model="regUser.pwd"></input>
+
+            <label>Re-type password</label>
+            <input type="password" ng-model="regUser.pwd2"></input>
+
+            <button type="submit">Register</button>
+
+          </form>
+
+          
+
+        </div>
+      </div>
     </div>
-
-
-
-    <div id="query" class="monofont" ng-show="!isLoggedIn">
-
-      <form ng-submit="login(user)">
-
-        <label>Username</label>
-        <input ng-model="user.name"></input>
-
-        <label>Password</label>
-        <input type="password" ng-model="user.pwd"></input>
-
-        <button type="submit">Login</button>
-
-
-      </form>
-
-
-
-
-
-      <form ng-submit="register(regUser)">
-
-        <label>Username</label>
-        <input ng-model="regUser.name"></input>
-
-        <label>Password</label>
-        <input type="password" ng-model="regUser.pwd"></input>
-
-        <label>Re-type password</label>
-        <input type="password" ng-model="regUser.pwd2"></input>
-
-        <button type="submit">Register</button>
-
-
-      </form>
-
-
-
-
-
-
-    </div>
-
   </div>
 
 
